@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アプリ一覧</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #333; }
+        h1 { font-size: 1.4rem; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 12px 0; border-bottom: 1px solid #eee; }
+        a { font-size: 1.1rem; text-decoration: none; color: #0366d6; }
+    </style>
+</head>
+<body>
+    <h1>アプリ一覧</h1>
+    <ul id="appList"></ul>
+
+    <script>
+        // サーバーから .html ファイルの一覧を取得してリンクを表示する
+        async function loadPages() {
+            const response = await fetch('/api/pages');
+            const files = await response.json();
+
+            const list = document.getElementById('appList');
+            if (files.length === 0) {
+                list.innerHTML = '<li>public/ に .html ファイルがありません。</li>';
+                return;
+            }
+
+            files.forEach(name => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = name;
+                a.textContent = name;
+                li.appendChild(a);
+                list.appendChild(li);
+            });
+        }
+
+        loadPages();
+    </script>
+</body>
+</html>
