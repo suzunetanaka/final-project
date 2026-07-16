@@ -1,15 +1,17 @@
-# Generic Web API for LLM Integration
+# レシピ記録アプリ
 
-A flexible Node.js web API that allows you to create LLM-powered applications by simply editing a Markdown prompt file. No code changes required for different use cases.
+条件に合うレシピを提案し、作った記録とレシピ帳を保存できるNode.jsアプリです。
+提案はAIが入力条件から直接レシピを生成します。
+提案時に保存済みデータを候補として使わず、生成したレシピも自動保存しません。
+提案ボタンでは検索や追加候補取得を挟まず、1回のLLM呼び出しで3件を生成します。
 
 ## Features
 
-- 🎯 **Generic Design**: One API endpoint for any LLM application
-- 📝 **Markdown Prompts**: Define your application logic in `prompt.md`
-- 🔄 **Variable Substitution**: Automatic replacement of `${variable}` placeholders
-- 🤖 **Multi-Provider**: Supports OpenAI and Google Gemini
-- 🎲 **Local Board Game DB**: Board game recommendations can run from `data/boardgames.json` without calling an LLM each time
-- ⚡ **No Code Changes**: Switch between applications by editing `prompt.md`
+- レシピ提案: 材料、食べたいもの、時間、難易度、人数をもとに推薦
+- レシピ帳: 気に入ったレシピを保存
+- 調理記録: 満足度、味付け、メモを保存
+- AI調整: 提案または保存したレシピを好みに合わせて調整
+- Markdownプロンプト: `prompt.md` でレシピ提案のAI方針を管理
 
 ## Quick Start
 
@@ -31,10 +33,15 @@ Edit `.env.local`:
 ```env
 # For OpenAI (default)
 OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-5.6-luna
+OPENAI_REASONING_EFFORT=low
 
 # For Gemini (if switching)
 GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.5-flash
 
+LLM_PROVIDER=openai
+LLM_TIMEOUT_MS=60000
 PORT=8080
 ```
 
@@ -42,17 +49,17 @@ PORT=8080
 
 ### 3. Configure LLM Provider
 
-Edit the `PROVIDER` constant near the top of `server.js`:
+Set `LLM_PROVIDER` in `.env.local`:
 
-```javascript
-// For OpenAI (default) -> gpt-5.5
-const PROVIDER = 'openai';
+```env
+# For OpenAI (default)
+LLM_PROVIDER=openai
 
-// For Gemini -> gemini-3.5-flash
-// const PROVIDER = 'gemini';
+# For Gemini
+LLM_PROVIDER=gemini
 ```
 
-The model is selected automatically from the `MODELS` map based on `PROVIDER`.
+The model is selected from `OPENAI_MODEL` or `GEMINI_MODEL`.
 
 ### 4. Start Server
 
@@ -67,207 +74,81 @@ Visit `http://localhost:8080`
 ### Architecture
 
 ```
-Client (quiz.html) → POST /api/boardgames/recommend → server.js → data/boardgames.json
-
-Other LLM apps:
-Client → POST /api/ → server.js → LLM → Response
-                           ↓
-                    prompt.md (template)
+Client → POST /api/recipes/recommend → server.js → prompt.md → LLM
 ```
 
-### Variable Substitution
+### Main Files
 
-The API automatically replaces variables in `prompt.md` with request data:
-
-**prompt.md:**
-```markdown
-Create ${count} questions about ${topic}.
-Format: JSON array
-```
-
-**Request:**
-```json
-{
-  "count": 5,
-  "topic": "JavaScript"
-}
-```
-
-**Result:** Variables `${count}` and `${topic}` are replaced with actual values.
-
-### API Endpoint
-
-**POST** `/api/`
-
-**Request Body:**
-```json
-{
-  "title": "My Quiz",
-  "count": 5,
-  "any_variable": "value"
-}
-```
-
-**Response:**
-```json
-{
-  "title": "My Quiz",
-  "data": [...]
-}
-```
-
-### Board Game Recommendation API
-
-**GET** `/api/boardgames`
-
-Returns all board games from the local database.
-
-**POST** `/api/boardgames/recommend`
-
-Uses `data/boardgames.json` and a local scoring function. It does not call OpenAI or Gemini.
-
-**Request Body:**
-```json
-{
-  "players": 4,
-  "playTime": "30〜60分",
-  "difficulty": "初心者向け",
-  "description": "会話が盛り上がるもの",
-  "count": 5
-}
-```
-
-**Response:**
-```json
-{
-  "title": "ボードゲーム推薦",
-  "data": [
-    {
-      "title": "コードネーム",
-      "players": "4〜8人",
-      "playTime": "約15〜30分",
-      "difficulty": "初心者向け",
-      "genre": "チーム戦・言葉遊び",
-      "description": "..."
-    }
-  ]
-}
-```
-
-## Example Applications
-
-### 1. IT Certification Quiz (Included)
-
-**Files:**
-- `prompt.md` - Defines IT quiz generation logic
-- `public/quiz.html` - Quiz interface
-
-**Usage:** Generate IT certification practice questions
-
-### 2. Translation App (Example)
-
-**prompt.md:**
-```markdown
-# Translation Service
-
-Translate the following text to ${target_language}:
-
-"${text}"
-
-Return only the translated text.
-```
-
-**Request:**
-```json
-{
-  "text": "Hello world",
-  "target_language": "Japanese"
-}
-```
-
-### 3. Code Review App (Example)
-
-**prompt.md:**
-```markdown
-# Code Review Assistant
-
-Review this ${language} code and provide feedback:
-
-```${language}
-${code}
-```
-
-Provide:
-1. Issues found
-2. Suggestions for improvement
-3. Best practices
-```
-
-**Request:**
-```json
-{
-  "language": "Python",
-  "code": "def hello():\n    print('world')"
-}
-```
+- `public/index.html` - Recipe recommendation and cooking record interface
+- `public/recipe.css` - Recipe-specific styles
+- `data/recipes.json` - 互換用のレシピ保存ファイル（提案処理では使用しません）
+- `data/recipe-records.json` - Saved cooking records
+- `data/recipe-favorites.json` - Saved favorite recipes
+- `prompt.md` - Recipe recommendation prompt used by the recommendation API
 
 ## File Structure
 
 ```
-generic-webapi/
-├── server.js          # Generic API server (no changes needed)
+final-project/
+├── server.js          # API server
 ├── prompt.md          # Application-specific prompt template
 ├── data/
-│   └── boardgames.json # Local board game recommendation database
+│   ├── recipes.json   # Hidden recipe recommendation database
+│   ├── recipe-records.json # Saved cooking records
+│   └── recipe-favorites.json # Saved favorite recipes
 ├── package.json       # Dependencies
 ├── .env.example       # Environment variables template
 ├── public/            # Static files
-│   ├── quiz.html     # IT quiz application
-│   ├── style.css     # Styles
-│   └── quiz.css      # Quiz-specific styles
+│   ├── index.html    # Recipe journal application
+│   ├── style.css     # Base styles
+│   └── recipe.css    # Recipe-specific styles
 └── README.md         # This file
 ```
 
-## Creating New Applications
+## Prompt Usage
 
-1. **Edit `prompt.md`** - Define your application logic and variables
-2. **Create client HTML** - Build your user interface in `public/`
-3. **Send requests** - Use any variables you defined in `prompt.md`
+`/api/recipes/recommend` は `prompt.md` に以下の変数を渡します。
 
-No server code changes required!
+- `${ingredients}`: 使いたい材料
+- `${craving}`: 食べたいもの・気分
+- `${time}`: 希望調理時間
+- `${difficulty}`: 希望難易度
+- `${servings}`: 人数
+- `${count}`: 提案件数
+
+AIは入力条件から新規レシピを直接生成します。提案時に保存済みデータを候補として使わず、生成レシピも自動保存しません。プロンプトは速度を優先して短く保ちます。
 
 ## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Google Gemini API key | Yes (if using Gemini) |
+| `GEMINI_MODEL` | Gemini model name | No (default: gemini-3.5-flash) |
 | `OPENAI_API_KEY` | OpenAI API key | Yes (if using OpenAI) |
+| `OPENAI_MODEL` | OpenAI model name | No (default: gpt-5.6-luna) |
+| `OPENAI_REASONING_EFFORT` | OpenAI reasoning effort | No (default: low) |
+| `LLM_PROVIDER` | AI provider (`openai` or `gemini`) | No (default: openai) |
 | `PORT` | Server port | No (default: 8080) |
+| `LLM_TIMEOUT_MS` | AI recommendation timeout in milliseconds | No (default: 60000) |
 
 ## LLM Provider Configuration
 
 ### Switch to OpenAI (default)
 
-1. Edit `server.js`:
-```javascript
-const PROVIDER = 'openai';
-```
-
-2. Set OpenAI API key in `.env.local`:
+Set OpenAI provider and API key in `.env.local`:
 ```env
+LLM_PROVIDER=openai
 OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5.6-luna
 ```
 
 ### Switch to Gemini
 
-1. Edit `server.js`:
-```javascript
-const PROVIDER = 'gemini';
-```
-
-2. Set Gemini API key in `.env.local`:
+Set Gemini provider and API key in `.env.local`:
 ```env
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 ## Development
@@ -280,7 +161,9 @@ npm run dev
 ### Supported Models
 
 **OpenAI:**
-- `gpt-5.5` (default)
+- `gpt-5.6-luna` (default)
+- `gpt-5.6`
+- `gpt-5.6-terra`
 
 **Gemini:**
 - `gemini-3.5-flash`
