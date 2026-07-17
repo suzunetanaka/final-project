@@ -124,7 +124,7 @@
 
                     <div class="form-group">
                         <label for="notes">メモ</label>
-                        <textarea id="notes" rows="4" placeholder="感想、次回変えたいこと、家族の反応など"></textarea>
+                        <textarea id="notes" rows="4" placeholder="感想、次回変えたいことなど"></textarea>
                     </div>
 
                     <button class="btn primary-action" type="submit">記録を保存</button>
@@ -323,7 +323,7 @@
             list.innerHTML = '';
 
             if (state.favorites.length === 0) {
-                list.innerHTML = '<p class="empty-state">まだレシピ帳に登録されたレシピがありません。AIで調整したレシピを保存できます。</p>';
+                list.innerHTML = '<p class="empty-state">まだレシピ帳に登録されたレシピがありません。</p>';
                 return;
             }
 
