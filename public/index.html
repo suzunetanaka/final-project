@@ -161,6 +161,7 @@
             recipes: [],
             customRecipes: loadCustomRecipesFromStorage(),
         };
+        const RECIPE_RECORDS_STORAGE_KEY = 'recipeRecords';
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('cookedAt').value = new Date().toISOString().slice(0, 10);
@@ -245,29 +246,16 @@
                 return;
             }
 
-            try {
-                const response = await fetch('/api/recipe-records', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'API error');
-                }
-
-                resetRecordForm();
-                await loadRecords();
-                switchView('recordView');
-            } catch (error) {
-                alert('記録の保存に失敗しました: ' + error.message);
-            }
+            const record = createLocalRecord(payload);
+            state.records = [record, ...state.records];
+            saveRecordsToStorage();
+            resetRecordForm();
+            renderJournal();
+            switchView('recordView');
         }
 
-        async function loadRecords() {
-            const response = await fetch('/api/recipe-records');
-            state.records = await response.json();
+        function loadRecords() {
+            state.records = loadRecordsFromStorage();
             renderJournal();
         }
 
@@ -548,20 +536,9 @@
                 return;
             }
 
-            try {
-                const response = await fetch(`/api/recipe-records/${encodeURIComponent(record.id)}`, {
-                    method: 'DELETE',
-                });
-
-                if (!response.ok) {
-                    throw new Error(await readErrorMessage(response));
-                }
-
-                state.records = state.records.filter((item) => item.id !== record.id);
-                await loadRecords();
-            } catch (error) {
-                alert('記録の削除に失敗しました: ' + error.message);
-            }
+            state.records = state.records.filter((item) => item.id !== record.id);
+            saveRecordsToStorage();
+            renderJournal();
         }
 
         async function adjustRecipe(record, recipe, item) {
@@ -706,6 +683,37 @@
 
         function saveCustomRecipesToStorage() {
             localStorage.setItem('customRecipes', JSON.stringify(state.customRecipes));
+        }
+
+        function createLocalRecord(record) {
+            const now = new Date().toISOString();
+            return {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                recipeId: String(record.recipeId || ''),
+                title: String(record.title || '').trim(),
+                category: String(record.category || ''),
+                cookedAt: String(record.cookedAt || now.slice(0, 10)),
+                satisfaction: Number(record.satisfaction || 3),
+                actualDifficulty: String(record.actualDifficulty || 'ふつう'),
+                notes: String(record.notes || ''),
+                adjustments: String(record.adjustments || ''),
+                favorite: false,
+                createdAt: now,
+                updatedAt: now,
+            };
+        }
+
+        function loadRecordsFromStorage() {
+            try {
+                const records = JSON.parse(localStorage.getItem(RECIPE_RECORDS_STORAGE_KEY)) || [];
+                return Array.isArray(records) ? records : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveRecordsToStorage() {
+            localStorage.setItem(RECIPE_RECORDS_STORAGE_KEY, JSON.stringify(state.records));
         }
 
         function mergeRecipes(recipes, additionalRecipes) {

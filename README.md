@@ -9,7 +9,7 @@
 
 - レシピ提案: 材料、食べたいもの、時間、難易度、人数をもとに推薦
 - レシピ帳: 気に入ったレシピを保存
-- 調理記録: 満足度、味付け、メモを保存
+- 調理記録: 満足度、メモをブラウザのローカルストレージに保存
 - AI調整: 提案または保存したレシピを好みに合わせて調整
 - Markdownプロンプト: `prompt.md` でレシピ提案のAI方針を管理
 
@@ -82,7 +82,7 @@ Client → POST /api/recipes/recommend → server.js → prompt.md → LLM
 - `public/index.html` - Recipe recommendation and cooking record interface
 - `public/recipe.css` - Recipe-specific styles
 - `data/recipes.json` - 互換用のレシピ保存ファイル（提案処理では使用しません）
-- `data/recipe-records.json` - Saved cooking records
+- ブラウザの `localStorage.recipeRecords` - Saved cooking records
 - `data/recipe-favorites.json` - Saved favorite recipes
 - `prompt.md` - Recipe recommendation prompt used by the recommendation API
 
@@ -94,7 +94,7 @@ final-project/
 ├── prompt.md          # Application-specific prompt template
 ├── data/
 │   ├── recipes.json   # Hidden recipe recommendation database
-│   ├── recipe-records.json # Saved cooking records
+│   ├── recipe-records.json # Legacy server-side cooking records file
 │   └── recipe-favorites.json # Saved favorite recipes
 ├── package.json       # Dependencies
 ├── .env.example       # Environment variables template
